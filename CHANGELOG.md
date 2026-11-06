@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-06
+
 ### Fixed
 
 - Dependency ranges now include the first releases that allow Puppet 9 (`puppetlabs/stdlib`
@@ -56,5 +58,6 @@ Initial release.
 - Path, socket, URL and account parameters of the classes are type-checked (absolute paths,
   http(s) URLs, non-empty account names).
 
-[Unreleased]: https://github.com/Data-JT/puppet-greenbone/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Data-JT/puppet-greenbone/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Data-JT/puppet-greenbone/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Data-JT/puppet-greenbone/releases/tag/v0.1.0
