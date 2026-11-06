@@ -6,15 +6,15 @@ fixtures:
   forge_modules:
     stdlib:
       repo: "puppetlabs/stdlib"
-      ref: "9.6.0"
+      ref: "10.1.1"
     postgresql:
       repo: "puppetlabs/postgresql"
-      ref: "10.3.0"
+      ref: "10.8.0"
     apt:
       repo: "puppetlabs/apt"
-      ref: "9.4.0"
+      ref: "11.4.1"
     concat:
       repo: "puppetlabs/concat"
-      ref: "9.0.2"
+      ref: "10.1.0"
   symlinks:
     greenbone: "#{source_dir}"

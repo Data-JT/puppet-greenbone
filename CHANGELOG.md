@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Dependency ranges now include the first releases that allow Puppet 9 (`puppetlabs/stdlib`
+  10.x, `puppetlabs/apt` 11.x), so the module installs on Puppet 9 as `metadata.json` claims.
+
 ## [0.1.0] - 2026-11-06
 
 Initial release.

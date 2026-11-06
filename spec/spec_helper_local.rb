@@ -16,6 +16,8 @@
 # loader instantiates them with Kernel#eval, which line coverage does not
 # record.
 module GreenboneSpecRealAutoloadPath
+  MODULE_LIB = File.realpath(File.expand_path('../lib', __dir__)) + File::SEPARATOR
+
   def get_file(name, env)
     file = super
     file && File.realpath(file)
@@ -23,7 +25,9 @@ module GreenboneSpecRealAutoloadPath
 
   def load_file(name, env)
     file = get_file(name.to_s, env)
-    return super unless file && $LOADED_FEATURES.include?(file)
+    # Only this module's files: Puppet's own legacy functions must load normally,
+    # or their function_* methods never reach the scope.
+    return super unless file&.start_with?(MODULE_LIB) && $LOADED_FEATURES.include?(file)
 
     mark_loaded(name, file)
     true
