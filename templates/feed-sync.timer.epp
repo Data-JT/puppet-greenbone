@@ -1,0 +1,14 @@
+<%- |
+  String $calendar,
+| -%>
+# Puppet-managed systemd timer for Greenbone feed synchronisation.
+[Unit]
+Description=Greenbone Community Edition Feed Sync Timer
+Requires=greenbone-feed-sync.service
+
+[Timer]
+OnCalendar=<%= $calendar %>
+Persistent=true
+
+[Install]
+WantedBy=timers.target

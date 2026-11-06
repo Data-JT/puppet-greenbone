@@ -1,0 +1,6 @@
+---
+# puppetlabs/postgresql (10.x, up to at least 10.5.0) has no default server
+# version for Debian 13 and fails catalog compilation with "No preferred
+# version defined or automatically detected". A real Debian 13 node has to set
+# this too -- see the README's greenbone::database section. Trixie ships 17.
+postgresql::globals::version: '17'

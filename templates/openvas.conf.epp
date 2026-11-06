@@ -1,0 +1,7 @@
+<%- |
+  Hash[String, String] $settings,
+| -%>
+# Puppet-managed OpenVAS configuration.
+<% $settings.each |String $key, String $value| { -%>
+<%= $key %> = <%= $value %>
+<% } -%>

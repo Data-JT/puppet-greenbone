@@ -1,0 +1,8 @@
+<%- |
+  String $scanner_socket,
+  String $gvmd_socket,
+| -%>
+# Puppet-managed gvmd configuration.
+[Daemon]
+scanner-socket = <%= $scanner_socket %>
+unix-socket = <%= $gvmd_socket %>

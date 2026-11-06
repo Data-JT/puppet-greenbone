@@ -1,0 +1,210 @@
+---
+# Reek configuration. The layout is shared with puppet-proxmox_virtual_environment,
+# puppet-proxmox_backup_server and puppet-proxmox_datacenter_manager.
+#
+# CI runs Reek with a zero-warning baseline, so every exception is explicit,
+# named and commented. Exceptions live only in this file: the code carries no
+# inline :reek: comments.
+#
+# The single `detectors` mapping has two sections. Reek cannot merge two
+# entries for the same detector, so each detector appears in exactly one:
+#
+#   1. Shared base, copied verbatim from the sibling modules: threshold tuning
+#      for the method shapes the Puppet Resource API mandates, and the
+#      exceptions those detectors need in any of the modules. Entries naming
+#      Proxmox classes match nothing here and are kept so the block stays
+#      identical.
+#   2. Module-specific: named, per-location exceptions for this module only.
+#
+# A string under `exclude` matches every context whose full name contains it
+# ("Class" or "Class#method"); a string written as "/.../" is a regular
+# expression.
+detectors:
+  # --- 1. Shared base -------------------------------------------------------
+  DataClump:
+    # The Resource API's create/update/delete callbacks share
+    # (context, name[, should]) by contract: exactly three methods. Raising
+    # max_copies from 2 to 3 stops flagging that mandatory CRUD shape while
+    # still catching a clump across four or more methods.
+    max_copies: 3
+    exclude:
+      # Each transport's HTTP verb helpers share (context, path, body, query).
+      - "/\\APuppet::Transport::Proxmox[A-Za-z]+\\z/"
+      # proxmox_virtual_environment only: providers that pass (context, name)
+      # to one helper beyond the CRUD triple, and the SDN providers that thread
+      # (context, should) and (context, vnet) through their path helpers.
+      - "Puppet::Provider::PveBackupJob::ProxmoxVirtualEnvironment"
+      - "Puppet::Provider::PveRole::ProxmoxVirtualEnvironment"
+      - "Puppet::Provider::PveSdnBaseProvider"
+      - "Puppet::Provider::PveSdnSubnet::ProxmoxVirtualEnvironment"
+      - "Puppet::Provider::PveStorage::ProxmoxVirtualEnvironment"
+      - "Puppet::Provider::PveUser::ProxmoxVirtualEnvironment"
+  LongParameterList:
+    # insync?(context, name, attribute_name, is, should) is the Resource API's
+    # mandated callback signature. Raising max_params from 3 to 5 stops
+    # flagging that contract while still catching six or more parameters.
+    max_params: 5
+    exclude:
+      # Each transport's generic call(context, method, path, body:, query:,
+      # path_params:) is the public request boundary; keyword arguments keep
+      # its call sites clear.
+      - "/\\APuppet::Transport::Proxmox[A-Za-z]+#call\\z/"
+
+  # --- 2. Module-specific (greenbone) ---------------------------------------
+  ControlParameter:
+    # The Resource API's insync? callback is told which attribute to compare;
+    # answering only for some of them is the contract.
+    # flag_value maps a Boolean to GMP's 1/0 and nothing else.
+    exclude:
+      - "Puppet::Provider::GvmBaseProvider#insync?"
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#preference_drift"
+      - "Puppet::Provider::GvmTarget::GvmTarget#flag_value"
+  DuplicateMethodCall:
+    exclude:
+      # reconcile reads the config's preferences twice on purpose: once to find
+      # the drift, once after writing, because gvmd answers 200 for a value it
+      # then stores empty.
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#reconcile"
+      # command retries the round trip from mutually exclusive rescue branches.
+      - "Puppet::Transport::Greenbone#command"
+      # The two Process.clock_gettime reads are distinct timestamps (deadline
+      # and now), and the write-timeout raise sits on two exclusive exits.
+      - "Puppet::Transport::Greenbone#read_response"
+      - "Puppet::Transport::Greenbone#write_with_timeout"
+  FeatureEnvy:
+    exclude:
+      # canonicalize rewrites the Resource API's resource hashes in place by
+      # contract, so it refers to them more than to the provider.
+      - "/\\APuppet::Provider::Gvm[A-Za-z]+::Gvm[A-Za-z]+#canonicalize\\z/"
+      # These translate a should hash or a GMP response into the other form.
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#nvt_drift"
+      - "Puppet::Provider::GvmTarget::GvmTarget#comment_changed?"
+      - "Puppet::Provider::GvmTask::GvmTask#build_modify_xml"
+      - "Puppet::Provider::GvmUser::GvmUser#hosts_xml"
+      - "Puppet::Transport::Greenbone#check_status!"
+      - "Puppet::Transport::Greenbone#idempotent_op?"
+  InstanceVariableAssumption:
+    # Providers retain transport and lookup state across Resource API callbacks.
+    exclude:
+      - "Puppet::Provider::GvmBaseProvider"
+      - "Puppet::Provider::GvmUserSetting::GvmUserSetting"
+  ManualDispatch:
+    # These unwrap a value that may or may not be Sensitive.
+    exclude:
+      - "Puppet::Provider::GvmBaseProvider#unwrap"
+      - "Puppet::Transport::Greenbone#initialize"
+      # gvm_admin's provider and the to_transport_yaml function are defined in
+      # blocks, so Reek names their methods without a class.
+      - "/\\Acreate\\z/"
+      - "/\\Ato_transport_yaml\\z/"
+  MissingSafeMethod:
+    # check_status! raises on a GMP error status; there is no safe variant to offer.
+    exclude:
+      - "Puppet::Transport::Greenbone"
+  NestedIterators:
+    # Matching a resource by all of the type's namevars is a find over an all?.
+    exclude:
+      - "Puppet::Provider::GvmBaseProvider#current_state"
+  NilCheck:
+    # delete_properties is in sync when every listed attribute reads back nil,
+    # which is how get() reports an unset optional attribute.
+    exclude:
+      - "Puppet::Provider::GvmBaseProvider#delete_properties_insync?"
+  RepeatedConditional:
+    # Each GMP command raises when the object it names cannot be found; the
+    # repeated `unless id` is that guard, once per command.
+    # user_setting answers each of its three GMP reads with nothing when the
+    # transport is not configured yet.
+    exclude:
+      - "Puppet::Provider::GvmPermission::GvmPermission"
+      - "Puppet::Provider::GvmTarget::GvmTarget"
+      - "Puppet::Provider::GvmTask::GvmTask"
+      - "Puppet::Provider::GvmUser::GvmUser"
+      - "Puppet::Provider::GvmUserSetting::GvmUserSetting"
+  TooManyMethods:
+    # The base provider holds the GMP helpers every provider shares; the other
+    # three keep one small method per GMP element or normalization rule.
+    # The transport centralizes its public GMP and response-handling contract.
+    exclude:
+      - "Puppet::Provider::GvmBaseProvider"
+      - "Puppet::Provider::GvmOverride::GvmOverride"
+      - "Puppet::Provider::GvmPermission::GvmPermission"
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig"
+  TooManyStatements:
+    # These are clearer as one linear GMP operation: build the request from the
+    # should hash, or read a response into the resource hash, element by
+    # element. The transport methods are the socket I/O sequence itself
+    # (connect, authenticate, write with a deadline, read to the closing root
+    # tag, check the status).
+    exclude:
+      # The transport constructor reads the connection settings it is given,
+      # one statement per key. Reek excludes initialize by default, but an
+      # explicit exclude list replaces that default, so it is restated here.
+      - "Puppet::Transport::Greenbone#initialize"
+      - "Puppet::Provider::GvmBaseProvider#delete_properties_insync?"
+      - "Puppet::Provider::GvmBaseProvider#refresh_changes"
+      - "Puppet::Provider::GvmBaseProvider#resolve_name_to_id"
+      - "Puppet::Provider::GvmBaseProvider#self.build_transport"
+      - "Puppet::Provider::GvmFilter::GvmFilter#canonical_term"
+      - "Puppet::Provider::GvmLdap::GvmLdap#enable_ldap"
+      - "Puppet::Provider::GvmLdap::GvmLdap#get"
+      - "Puppet::Provider::GvmOverride::GvmOverride#body"
+      - "Puppet::Provider::GvmOverride::GvmOverride#resolve_override_id"
+      - "Puppet::Provider::GvmOverride::GvmOverride#scope_elements"
+      - "Puppet::Provider::GvmPermission::GvmPermission#body"
+      - "Puppet::Provider::GvmPermission::GvmPermission#resolve_permission_id"
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#config_id"
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#get"
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#nvt_drift"
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#read_preferences"
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#reconcile"
+      - "Puppet::Provider::GvmTarget::GvmTarget#build_create_xml"
+      - "Puppet::Provider::GvmTarget::GvmTarget#build_modify_xml"
+      - "Puppet::Provider::GvmTarget::GvmTarget#current_target"
+      - "Puppet::Provider::GvmTarget::GvmTarget#update"
+      - "Puppet::Provider::GvmTask::GvmTask#build_create_xml"
+      - "Puppet::Provider::GvmTask::GvmTask#build_modify_xml"
+      - "Puppet::Provider::GvmTask::GvmTask#update"
+      - "Puppet::Provider::GvmUser::GvmUser#get"
+      - "Puppet::Provider::GvmUser::GvmUser#update"
+      - "Puppet::Provider::GvmUserSetting::GvmUserSetting#desired_value"
+      - "Puppet::Provider::GvmUserSetting::GvmUserSetting#get"
+      - "Puppet::Transport::Greenbone#_send_and_recv"
+      - "Puppet::Transport::Greenbone#authenticate"
+      - "Puppet::Transport::Greenbone#check_status!"
+      - "Puppet::Transport::Greenbone#command"
+      - "Puppet::Transport::Greenbone#read_response"
+      - "Puppet::Transport::Greenbone#socket"
+      - "Puppet::Transport::Greenbone#write_with_timeout"
+  UtilityFunction:
+    # These helpers belong with the provider or transport whose GMP format
+    # they encode or parse; the shared ones live in the base provider so every
+    # provider escapes and normalizes the same way.
+    exclude:
+      - "Puppet::Provider::GvmBaseProvider#absent_state"
+      - "Puppet::Provider::GvmBaseProvider#current_state"
+      - "Puppet::Provider::GvmBaseProvider#gmp_escape_filter"
+      - "Puppet::Provider::GvmBaseProvider#presence"
+      - "Puppet::Provider::GvmBaseProvider#unwrap"
+      - "Puppet::Provider::GvmBaseProvider#xe"
+      - "Puppet::Provider::GvmFilter::GvmFilter#keyword?"
+      - "Puppet::Provider::GvmLdap::GvmLdap#read_settings"
+      - "Puppet::Provider::GvmLdap::GvmLdap#truthy?"
+      - "Puppet::Provider::GvmOverride::GvmOverride#integral"
+      - "Puppet::Provider::GvmOverride::GvmOverride#normalize_hosts"
+      - "Puppet::Provider::GvmOverride::GvmOverride#normalize_text"
+      - "Puppet::Provider::GvmPermission::GvmPermission#canonical_permission"
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#describe"
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#encoded"
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#index_nvt"
+      - "Puppet::Provider::GvmScanConfig::GvmScanConfig#parse_preference"
+      - "Puppet::Provider::GvmSchedule::GvmSchedule#normalize_ical"
+      - "Puppet::Provider::GvmTarget::GvmTarget#clean_hosts"
+      - "Puppet::Provider::GvmTarget::GvmTarget#parse_target"
+      - "Puppet::Provider::GvmTask::GvmTask#build_preferences_xml"
+      - "Puppet::Provider::GvmTask::GvmTask#preference"
+      - "Puppet::Provider::GvmUserSetting::GvmUserSetting#setting_ids_in"
+      - "Puppet::Transport::Greenbone#escape_xml"
+      - "Puppet::Transport::Greenbone#gmp_op_name"
+      # The function's dispatch target, which Reek sees as a bare method.
+      - "/\\Ato_transport_yaml\\z/"

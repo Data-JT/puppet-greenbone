@@ -1,0 +1,20 @@
+---
+# Versions are pinned to stay within the module's metadata.json dependency
+# ranges. concat is a transitive dependency of postgresql and must be declared
+# explicitly. The Resource API ships with Puppet 8, so it needs no fixture.
+fixtures:
+  forge_modules:
+    stdlib:
+      repo: "puppetlabs/stdlib"
+      ref: "9.6.0"
+    postgresql:
+      repo: "puppetlabs/postgresql"
+      ref: "10.3.0"
+    apt:
+      repo: "puppetlabs/apt"
+      ref: "9.4.0"
+    concat:
+      repo: "puppetlabs/concat"
+      ref: "9.0.2"
+  symlinks:
+    greenbone: "#{source_dir}"

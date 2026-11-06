@@ -1,0 +1,26 @@
+<%- |
+  String        $sync_binary,
+  Array[String] $sync_args,
+  String        $gvm_user,
+  Array[String] $read_write_paths,
+| -%>
+# Puppet-managed systemd service for Greenbone feed synchronisation.
+[Unit]
+Description=Greenbone Community Edition Feed Sync
+After=network-online.target gvmd.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=<%= $gvm_user %>
+ExecStart=<%= $sync_binary %><% $sync_args.each |$arg| { %> <%= $arg %><% } %>
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+<% unless empty($read_write_paths) { -%>
+ReadWritePaths=<%= $read_write_paths.join(' ') %>
+<% } -%>

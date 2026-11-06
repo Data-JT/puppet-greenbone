@@ -1,0 +1,10 @@
+---
+lookup_options:
+  greenbone::password:
+    convert_to: 'Sensitive'
+  greenbone::admin::password:
+    convert_to: 'Sensitive'
+
+greenbone::password: 'transport-secret'
+greenbone::admin::password: 'admin-secret'
+greenbone::repo_key_id: '0123456789ABCDEF0123456789ABCDEF01234567'

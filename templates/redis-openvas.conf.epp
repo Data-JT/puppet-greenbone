@@ -1,0 +1,31 @@
+<%- |
+  String           $socket_path,
+  String           $socket_perm,
+  String           $unixsocketgroup,
+  Boolean          $save,
+  String           $loglevel,
+  Optional[String] $maxmemory,
+| -%>
+# Puppet-managed Redis configuration for OpenVAS.
+# This instance is dedicated to the OpenVAS scanner.
+
+# Bind only to the Unix socket; no TCP listener.
+port 0
+unixsocket <%= $socket_path %>
+unixsocketperm <%= $socket_perm %>
+<% if $unixsocketgroup != '' { -%>
+# Group ownership of the socket so the gvm system group can connect
+unixsocketgroup <%= $unixsocketgroup %>
+<% } -%>
+
+loglevel <%= $loglevel %>
+
+<% if !$save { -%>
+# Persistence disabled — feed data is re-synced, not checkpointed.
+save ""
+<% } -%>
+
+<% if $maxmemory { -%>
+maxmemory <%= $maxmemory %>
+maxmemory-policy allkeys-lru
+<% } -%>

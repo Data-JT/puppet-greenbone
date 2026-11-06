@@ -1,0 +1,38 @@
+<%- |
+  String[1] $psql_path,
+  String[1] $gvmd_bin,
+  String[1] $db_user,
+  String[1] $gvm_user,
+  String[1] $migrate_sentinel,
+| -%>
+#!/bin/bash
+# Puppet-managed: do not edit manually.
+# Wraps gvmd --migrate with guaranteed REVOKE via bash trap so the transient
+# dba superuser grant is always cleaned up even when migration fails or the
+# process receives a signal.
+set -euo pipefail
+
+PSQL='<%= $psql_path %>'
+GVMD='<%= $gvmd_bin %>'
+DB_USER='<%= $db_user %>'
+GVM_USER='<%= $gvm_user %>'
+
+revoke_dba() {
+  runuser -u postgres -- "$PSQL" --no-password -d postgres \
+    -c "REVOKE dba FROM \"$DB_USER\"" 2>/dev/null || true
+}
+
+# Clean up any stale dba grant left by a previous failed migration run.
+revoke_dba
+
+# Guarantee cleanup on exit (success, failure, or signal).
+trap revoke_dba EXIT
+
+runuser -u postgres -- "$PSQL" --no-password -d postgres \
+  -c "GRANT dba TO \"$DB_USER\""
+
+runuser -u "$GVM_USER" -- "$GVMD" --migrate
+
+# Record successful migration so the `creates` guard can skip re-runs when the
+# gvmd package is not managed by Puppet.
+touch '<%= $migrate_sentinel %>'
