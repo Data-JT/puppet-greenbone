@@ -52,9 +52,16 @@ paths and the GMP protocol still carry the `greenbone` and `gvm` names, and so d
 ### How it works
 
 ```text
-Hiera / manifest ──> greenbone class ──> gvm_transport.yaml (GMP user and password, 0600)
-                                                │
-Puppet agent on the Greenbone host ──> gvm_* types ──> gvmd Unix socket (GMP)
+Hiera / manifest   declares the class and the resources
+      │
+      ▼
+greenbone class    writes gvm_transport.yaml (GMP user and password, 0600)
+      │
+      ▼
+gvm_* types        read that file on every agent run on the Greenbone host
+      │
+      ▼
+gvmd               Unix socket (GMP)
 ```
 
 The `greenbone` class writes the GMP credentials and socket path to a transport file in the
