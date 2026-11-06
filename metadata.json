@@ -1,7 +1,7 @@
 {
   "name": "datajt-greenbone",
   "version": "0.1.0",
-  "author": "datajt",
+  "author": "Data JT",
   "summary": "Manages Greenbone Community Edition declaratively via packages, config files, and the GMP API.",
   "license": "Apache-2.0",
   "source": "https://github.com/Data-JT/puppet-greenbone",
